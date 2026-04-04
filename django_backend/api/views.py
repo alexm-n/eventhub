@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from .models import Event, Participant, Registration
-from .serializers import EventSerializer, ParticipantSerializer, RegistrationSerializer
-from django_filters.rest_framework import DjangoFilterBackend
+from .serializers import EventSerializer, ParticipantSerializer, RegistrationSerializer, CustomTokenObtainPairSerializer
+    from django_filters.rest_framework import DjangoFilterBackend
 
 def is_admin(user):
     return user.is_staff
@@ -43,3 +43,6 @@ class RegistrationViewSet(viewsets.ModelViewSet):
         if self.action not in ['list', 'retrieve'] and not is_admin(request.user):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Vous n'avez pas les droits pour effectuer cette action.")
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
