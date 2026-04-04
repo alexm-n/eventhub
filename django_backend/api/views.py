@@ -11,8 +11,18 @@ class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['status', 'date']
+    def get_queryset(self):
+        qs = Event.objects.all()
+        status = self.request.query_params.get('status')
+        date = self.request.query_params.get('date')
 
+        if status:
+            qs = qs.filter(status=status)
+        if date:
+            qs = qs.filter(date__date=date)
+
+        return qs
+        
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [IsAuthenticated()]
