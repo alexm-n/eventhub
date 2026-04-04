@@ -23,6 +23,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        # Add custom claims
-        token['role'] = 'admin' if user.is_staff else 'viewer'
+        
+        if user.is_superuser:
+            token['role'] = 'admin'
+        elif user.is_staff:
+            token['role'] = 'editor'
+        else:
+            token['role'] = 'viewer'
+        
         return token
