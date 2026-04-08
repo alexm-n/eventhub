@@ -1,67 +1,113 @@
-import { useState, useEffect } from 'react';
-import { getEvents, getParticipants, getRegistrations } from '../services/api';
+import { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
+import api from '../services/api';
 
-export default function Dashboard() {
+const Dashboard = () => {
+    const { user, loading: authLoading } = useContext(AuthContext);
+
     const [stats, setStats] = useState({
-        totalEvents: 0,
-        totalParticipants: 0,
-        totalRegistrations: 0,
-        upcoming: 0,
-        ongoing: 0,
-        finished: 0,
+        events: 0,
+        participants: 0
     });
+
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [error, setError] = useState(null);
 
     useEffect(() => {
+        if (authLoading) return;
+
         const fetchStats = async () => {
+            setLoading(true);
+            setError(null);
+
             try {
-                const [eventsRes, participantsRes, registrationsRes] = await Promise.all([
-                    getEvents(),
-                    getParticipants(),
-                    getRegistrations()
+                const [eventsRes, participantsRes] = await Promise.all([
+                    api.get('/events/'),
+                    api.get('/participants/')
                 ]);
-                const events = eventsRes.data;
+
                 setStats({
-                    totalEvents: events.length,
-                    totalParticipants: participantsRes.data.length,
-                    totalRegistrations: registrationsRes.data.length,
-                    upcoming: events.filter(e => e.status === 'upcoming').length,
-                    ongoing: events.filter(e => e.status === 'ongoing').length,
-                    finished: events.filter(e => e.status === 'finished').length,
+                    events: eventsRes?.data?.length || 0,
+                    participants: participantsRes?.data?.length || 0
                 });
+
             } catch (err) {
-                setError('Erreur de chargement');
+                console.error("Dashboard error:", err);
+                setError("Failed to load dashboard data.");
+                setStats({ events: 0, participants: 0 });
             } finally {
                 setLoading(false);
             }
         };
-        fetchStats();
-    }, []);
 
-    if (loading) return <p>Chargement...</p>;
+        fetchStats();
+    }, [authLoading, user]); // 🔥 important
+
+    if (authLoading) {
+        return <p className="p-6">Loading user...</p>;
+    }
+
+    if (loading) {
+        return <p className="p-6">Loading dashboard...</p>;
+    }
+
+    if (error) {
+        return <p className="p-6 text-red-600">{error}</p>;
+    }
 
     return (
-        <div style={{ padding: 20 }}>
-            <h2>Dashboard</h2>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                <div style={{ border: '1px solid #ccc', padding: 20, borderRadius: 8 }}>
-                    <h3>Événements</h3>
-                    <p>Total : {stats.totalEvents}</p>
-                    <p>Upcoming : {stats.upcoming}</p>
-                    <p>Ongoing : {stats.ongoing}</p>
-                    <p>Finished : {stats.finished}</p>
+        <div>
+            <h1 className="text-3xl font-bold mb-2">Welcome to EventHub!</h1>
+
+            <p className="text-gray-600 mb-8">
+                You are logged in as{' '}
+                <strong>{user?.role || 'user'}</strong>.
+                {user?.role === 'viewer' &&
+                    " You have read-only access to the system."}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Events */}
+                <div className="bg-white p-6 rounded shadow border-t-4 border-blue-500">
+                    <h2 className="text-xl font-bold text-gray-700 mb-2">
+                        Total Events
+                    </h2>
+
+                    <p className="text-4xl font-black text-blue-600 mb-4">
+                        {stats.events}
+                    </p>
+
+                    <Link
+                        to="/events"
+                        className="text-blue-500 hover:underline"
+                    >
+                        Manage Events →
+                    </Link>
                 </div>
-                <div style={{ border: '1px solid #ccc', padding: 20, borderRadius: 8 }}>
-                    <h3>Participants</h3>
-                    <p>Total : {stats.totalParticipants}</p>
+
+                {/* Participants */}
+                <div className="bg-white p-6 rounded shadow border-t-4 border-green-500">
+                    <h2 className="text-xl font-bold text-gray-700 mb-2">
+                        Total Participants
+                    </h2>
+
+                    <p className="text-4xl font-black text-green-600 mb-4">
+                        {stats.participants}
+                    </p>
+
+                    <Link
+                        to="/participants"
+                        className="text-green-500 hover:underline"
+                    >
+                        Manage Participants →
+                    </Link>
                 </div>
-                <div style={{ border: '1px solid #ccc', padding: 20, borderRadius: 8 }}>
-                    <h3>Inscriptions</h3>
-                    <p>Total : {stats.totalRegistrations}</p>
-                </div>
+
             </div>
         </div>
     );
-}
+};
+
+export default Dashboard;
